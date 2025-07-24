@@ -77,7 +77,7 @@ self.addEventListener('notificationclick', event => {
   } else {
     // Default action - open the app
     event.waitUntil(
-      clients.openWindow('/')
+      self.clients.openWindow('/')
     );
   }
 });
