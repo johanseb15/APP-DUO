@@ -245,6 +245,174 @@ test_plan:
 
 agent_communication:
   - agent: "main"
-    message: "Created complete DUO Previa PWA MVP with menu system, cart functionality, WhatsApp integration, and delivery zones. All backend APIs implemented with MongoDB models. Frontend has responsive design with React Context for state management. Ready for backend testing to verify all API endpoints work correctly."
+    message: "PHASE 2 COMPLETE: Extended DUO Previa PWA with complete admin dashboard and push notification system. Added admin authentication (JWT), full CRUD operations for menu/zones/orders, push notification management, PWA service worker, and responsive admin interface. All new backend endpoints ready for testing."
+
+backend:
+  - task: "Admin authentication API (POST /api/admin/login, GET /api/admin/me)"
+    implemented: true
+    working: "NA"
+    file: "server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "Implemented JWT-based admin authentication with secure login and token verification"
+
+  - task: "Admin menu management API (POST/PUT/DELETE /api/admin/menu)"
+    implemented: true
+    working: "NA"
+    file: "server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "Added protected admin endpoints for full CRUD operations on menu items"
+
+  - task: "Admin order management API (GET /api/admin/orders, PUT /api/admin/orders/{id}/status)"
+    implemented: true
+    working: "NA"
+    file: "server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "Created admin order management with filtering and status updates"
+
+  - task: "Admin delivery zone management API (POST/PUT/DELETE /api/admin/delivery-zones)"
+    implemented: true
+    working: "NA"
+    file: "server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "Implemented protected admin endpoints for delivery zone management"
+
+  - task: "Push notification API (POST /api/push/subscribe, POST /api/admin/push/send)"
+    implemented: true
+    working: "NA"
+    file: "server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "Created push notification subscription and admin sending endpoints"
+
+frontend:
+  - task: "Admin login and authentication system"
+    implemented: true
+    working: "NA"
+    file: "App.js"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "Built complete admin login with JWT token management and React Context"
+
+  - task: "Admin dashboard with sidebar navigation"
+    implemented: true
+    working: "NA"
+    file: "App.js"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "Created responsive admin dashboard with sections for menu, orders, zones, and notifications"
+
+  - task: "Menu management interface (CRUD operations)"
+    implemented: true
+    working: "NA"
+    file: "App.js"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "Built complete menu item management with add/edit/delete functionality and image handling"
+
+  - task: "Order management interface with filtering"
+    implemented: true
+    working: "NA"
+    file: "App.js"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "Created order management dashboard with status filtering and order details display"
+
+  - task: "Delivery zone management interface"
+    implemented: true
+    working: "NA"
+    file: "App.js"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "Implemented zone management with CRUD operations and pricing configuration"
+
+  - task: "Push notification management interface"
+    implemented: true
+    working: "NA"
+    file: "App.js"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "Built notification management with preset templates and sending interface"
+
+  - task: "PWA service worker and push notification subscription"
+    implemented: true
+    working: "NA"
+    file: "sw.js, App.js"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "Implemented service worker with push notification support and user subscription prompts"
+
+  - task: "PWA manifest and offline capability"
+    implemented: true
+    working: "NA"
+    file: "manifest.json"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "Created PWA manifest with proper icons, theme colors, and standalone display mode"
+
+test_plan:
+  current_focus:
+    - "Admin authentication API (POST /api/admin/login, GET /api/admin/me)"
+    - "Admin menu management API (POST/PUT/DELETE /api/admin/menu)"
+    - "Admin order management API (GET /api/admin/orders, PUT /api/admin/orders/{id}/status)"
+    - "Push notification API (POST /api/push/subscribe, POST /api/admin/push/send)"
+  stuck_tasks: []
+  test_all: true
+  test_priority: "high_first"
   - agent: "testing"
     message: "🎉 BACKEND TESTING COMPLETE - ALL TESTS PASSED! Comprehensive testing of all 4 high-priority backend tasks completed successfully. All API endpoints are working correctly: (1) Menu APIs return proper Argentine food items with category filtering, (2) Order creation handles realistic customer data and cart items, (3) Delivery zones API provides Córdoba zones with correct pricing, (4) Data initialization populates authentic menu items and zones. Backend is production-ready. Created backend_test.py for future regression testing. Ready for frontend testing if needed."
