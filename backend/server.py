@@ -1,4 +1,5 @@
-from fastapi import FastAPI, APIRouter, HTTPException
+from fastapi import FastAPI, APIRouter, HTTPException, Depends
+from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from dotenv import load_dotenv
 from starlette.middleware.cors import CORSMiddleware
 from motor.motor_asyncio import AsyncIOMotorClient
@@ -8,7 +9,10 @@ from pathlib import Path
 from pydantic import BaseModel, Field
 from typing import List, Optional
 import uuid
-from datetime import datetime
+from datetime import datetime, timedelta
+import jwt
+import hashlib
+import json
 
 ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / '.env')
@@ -18,11 +22,19 @@ mongo_url = os.environ['MONGO_URL']
 client = AsyncIOMotorClient(mongo_url)
 db = client[os.environ['DB_NAME']]
 
+# JWT configuration
+JWT_SECRET = "duo_previa_secret_key_2024"
+JWT_ALGORITHM = "HS256"
+JWT_EXPIRATION_HOURS = 24
+
 # Create the main app without a prefix
 app = FastAPI()
 
 # Create a router with the /api prefix
 api_router = APIRouter(prefix="/api")
+
+# Security
+security = HTTPBearer()
 
 # Define Models
 class MenuItem(BaseModel):
@@ -43,6 +55,14 @@ class MenuItemCreate(BaseModel):
     image_url: str
     available: bool = True
 
+class MenuItemUpdate(BaseModel):
+    name: Optional[str] = None
+    description: Optional[str] = None
+    price: Optional[float] = None
+    category: Optional[str] = None
+    image_url: Optional[str] = None
+    available: Optional[bool] = None
+
 class CartItem(BaseModel):
     menu_item_id: str
     name: str
@@ -59,7 +79,7 @@ class Order(BaseModel):
     delivery_zone: str
     delivery_address: str
     special_instructions: Optional[str] = ""
-    status: str = "pending"  # pending, confirmed, preparing, delivered
+    status: str = "pending"  # pending, confirmed, preparing, delivered, cancelled
     created_at: datetime = Field(default_factory=datetime.utcnow)
 
 class OrderCreate(BaseModel):
@@ -70,6 +90,9 @@ class OrderCreate(BaseModel):
     delivery_zone: str
     delivery_address: str
     special_instructions: Optional[str] = ""
+
+class OrderStatusUpdate(BaseModel):
+    status: str
 
 class DeliveryZone(BaseModel):
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
@@ -84,7 +107,264 @@ class DeliveryZoneCreate(BaseModel):
     estimated_time: str
     active: bool = True
 
-# Menu endpoints
+class DeliveryZoneUpdate(BaseModel):
+    name: Optional[str] = None
+    delivery_fee: Optional[float] = None
+    estimated_time: Optional[str] = None
+    active: Optional[bool] = None
+
+# Admin Models
+class AdminLogin(BaseModel):
+    email: str
+    password: str
+
+class AdminUser(BaseModel):
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    email: str
+    password_hash: str
+    name: str
+    created_at: datetime = Field(default_factory=datetime.utcnow)
+
+class AdminCreate(BaseModel):
+    email: str
+    password: str
+    name: str
+
+# Push Notification Models
+class PushSubscription(BaseModel):
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    endpoint: str
+    keys: dict
+    user_agent: Optional[str] = ""
+    created_at: datetime = Field(default_factory=datetime.utcnow)
+
+class PushNotification(BaseModel):
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    title: str
+    body: str
+    icon: Optional[str] = ""
+    url: Optional[str] = ""
+    sent_at: datetime = Field(default_factory=datetime.utcnow)
+
+class PushNotificationCreate(BaseModel):
+    title: str
+    body: str
+    icon: Optional[str] = ""
+    url: Optional[str] = ""
+
+# Authentication functions
+def hash_password(password: str) -> str:
+    return hashlib.sha256(password.encode()).hexdigest()
+
+def verify_password(password: str, hashed: str) -> bool:
+    return hash_password(password) == hashed
+
+def create_access_token(email: str) -> str:
+    payload = {
+        "email": email,
+        "exp": datetime.utcnow() + timedelta(hours=JWT_EXPIRATION_HOURS)
+    }
+    return jwt.encode(payload, JWT_SECRET, algorithm=JWT_ALGORITHM)
+
+async def get_current_admin(credentials: HTTPAuthorizationCredentials = Depends(security)):
+    try:
+        payload = jwt.decode(credentials.credentials, JWT_SECRET, algorithms=[JWT_ALGORITHM])
+        email = payload.get("email")
+        if email is None:
+            raise HTTPException(status_code=401, detail="Invalid token")
+        
+        admin = await db.admin_users.find_one({"email": email})
+        if admin is None:
+            raise HTTPException(status_code=401, detail="Admin not found")
+            
+        return AdminUser(**admin)
+    except jwt.ExpiredSignatureError:
+        raise HTTPException(status_code=401, detail="Token expired")
+    except jwt.JWTError:
+        raise HTTPException(status_code=401, detail="Invalid token")
+
+# Admin Authentication endpoints
+@api_router.post("/admin/login")
+async def admin_login(login_data: AdminLogin):
+    """Admin login endpoint"""
+    admin = await db.admin_users.find_one({"email": login_data.email})
+    if not admin or not verify_password(login_data.password, admin["password_hash"]):
+        raise HTTPException(status_code=401, detail="Invalid credentials")
+    
+    token = create_access_token(login_data.email)
+    return {
+        "access_token": token,
+        "token_type": "bearer",
+        "admin": {
+            "id": admin["id"],
+            "email": admin["email"],
+            "name": admin["name"]
+        }
+    }
+
+@api_router.post("/admin/create")
+async def create_admin(admin_data: AdminCreate):
+    """Create admin user (for initial setup)"""
+    existing_admin = await db.admin_users.find_one({"email": admin_data.email})
+    if existing_admin:
+        raise HTTPException(status_code=400, detail="Admin already exists")
+    
+    admin = AdminUser(
+        email=admin_data.email,
+        password_hash=hash_password(admin_data.password),
+        name=admin_data.name
+    )
+    await db.admin_users.insert_one(admin.dict())
+    return {"message": "Admin created successfully"}
+
+@api_router.get("/admin/me")
+async def get_current_admin_info(current_admin: AdminUser = Depends(get_current_admin)):
+    """Get current admin info"""
+    return {
+        "id": current_admin.id,
+        "email": current_admin.email,
+        "name": current_admin.name
+    }
+
+# Protected Menu endpoints for admin
+@api_router.post("/admin/menu", response_model=MenuItem)
+async def create_menu_item_admin(item: MenuItemCreate, current_admin: AdminUser = Depends(get_current_admin)):
+    """Create a new menu item (admin only)"""
+    menu_item = MenuItem(**item.dict())
+    await db.menu_items.insert_one(menu_item.dict())
+    return menu_item
+
+@api_router.put("/admin/menu/{item_id}", response_model=MenuItem)
+async def update_menu_item_admin(item_id: str, item_update: MenuItemUpdate, current_admin: AdminUser = Depends(get_current_admin)):
+    """Update menu item (admin only)"""
+    update_data = {k: v for k, v in item_update.dict().items() if v is not None}
+    if not update_data:
+        raise HTTPException(status_code=400, detail="No update data provided")
+    
+    result = await db.menu_items.update_one(
+        {"id": item_id},
+        {"$set": update_data}
+    )
+    
+    if result.modified_count == 0:
+        raise HTTPException(status_code=404, detail="Menu item not found")
+    
+    updated_item = await db.menu_items.find_one({"id": item_id})
+    return MenuItem(**updated_item)
+
+@api_router.delete("/admin/menu/{item_id}")
+async def delete_menu_item_admin(item_id: str, current_admin: AdminUser = Depends(get_current_admin)):
+    """Delete menu item (admin only)"""
+    result = await db.menu_items.delete_one({"id": item_id})
+    if result.deleted_count == 0:
+        raise HTTPException(status_code=404, detail="Menu item not found")
+    return {"message": "Menu item deleted successfully"}
+
+# Protected Delivery Zone endpoints for admin
+@api_router.post("/admin/delivery-zones", response_model=DeliveryZone)
+async def create_delivery_zone_admin(zone: DeliveryZoneCreate, current_admin: AdminUser = Depends(get_current_admin)):
+    """Create delivery zone (admin only)"""
+    delivery_zone = DeliveryZone(**zone.dict())
+    await db.delivery_zones.insert_one(delivery_zone.dict())
+    return delivery_zone
+
+@api_router.put("/admin/delivery-zones/{zone_id}", response_model=DeliveryZone)
+async def update_delivery_zone_admin(zone_id: str, zone_update: DeliveryZoneUpdate, current_admin: AdminUser = Depends(get_current_admin)):
+    """Update delivery zone (admin only)"""
+    update_data = {k: v for k, v in zone_update.dict().items() if v is not None}
+    if not update_data:
+        raise HTTPException(status_code=400, detail="No update data provided")
+    
+    result = await db.delivery_zones.update_one(
+        {"id": zone_id},
+        {"$set": update_data}
+    )
+    
+    if result.modified_count == 0:
+        raise HTTPException(status_code=404, detail="Delivery zone not found")
+    
+    updated_zone = await db.delivery_zones.find_one({"id": zone_id})
+    return DeliveryZone(**updated_zone)
+
+@api_router.delete("/admin/delivery-zones/{zone_id}")
+async def delete_delivery_zone_admin(zone_id: str, current_admin: AdminUser = Depends(get_current_admin)):
+    """Delete delivery zone (admin only)"""
+    result = await db.delivery_zones.delete_one({"id": zone_id})
+    if result.deleted_count == 0:
+        raise HTTPException(status_code=404, detail="Delivery zone not found")
+    return {"message": "Delivery zone deleted successfully"}
+
+# Enhanced Order Management for admin
+@api_router.get("/admin/orders", response_model=List[Order])
+async def get_orders_admin(
+    status: Optional[str] = None,
+    limit: int = 100,
+    current_admin: AdminUser = Depends(get_current_admin)
+):
+    """Get orders with optional filtering (admin only)"""
+    query = {}
+    if status:
+        query["status"] = status
+    
+    orders = await db.orders.find(query).sort("created_at", -1).limit(limit).to_list(limit)
+    return [Order(**order) for order in orders]
+
+@api_router.put("/admin/orders/{order_id}/status")
+async def update_order_status_admin(
+    order_id: str, 
+    status_update: OrderStatusUpdate, 
+    current_admin: AdminUser = Depends(get_current_admin)
+):
+    """Update order status (admin only)"""
+    result = await db.orders.update_one(
+        {"id": order_id},
+        {"$set": {"status": status_update.status}}
+    )
+    
+    if result.modified_count == 0:
+        raise HTTPException(status_code=404, detail="Order not found")
+    
+    return {"message": f"Order status updated to {status_update.status}"}
+
+# Push Notification endpoints
+@api_router.post("/push/subscribe")
+async def subscribe_to_push(subscription_data: dict):
+    """Subscribe to push notifications"""
+    subscription = PushSubscription(
+        endpoint=subscription_data["endpoint"],
+        keys=subscription_data["keys"],
+        user_agent=subscription_data.get("userAgent", "")
+    )
+    await db.push_subscriptions.insert_one(subscription.dict())
+    return {"message": "Subscribed successfully"}
+
+@api_router.post("/admin/push/send")
+async def send_push_notification(
+    notification: PushNotificationCreate,
+    current_admin: AdminUser = Depends(get_current_admin)
+):
+    """Send push notification to all subscribers (admin only)"""
+    # Store notification in database
+    push_notification = PushNotification(**notification.dict())
+    await db.push_notifications.insert_one(push_notification.dict())
+    
+    # Get all active subscriptions
+    subscriptions = await db.push_subscriptions.find().to_list(1000)
+    
+    # In a real implementation, you would send the notification using web-push library
+    # For now, we'll just return success
+    return {
+        "message": f"Notification sent to {len(subscriptions)} subscribers",
+        "notification_id": push_notification.id
+    }
+
+@api_router.get("/admin/push/notifications", response_model=List[PushNotification])
+async def get_push_notifications_admin(current_admin: AdminUser = Depends(get_current_admin)):
+    """Get sent push notifications (admin only)"""
+    notifications = await db.push_notifications.find().sort("sent_at", -1).limit(50).to_list(50)
+    return [PushNotification(**notification) for notification in notifications]
+
+# Public Menu endpoints (existing)
 @api_router.get("/menu", response_model=List[MenuItem])
 async def get_menu():
     """Get all menu items"""
@@ -115,7 +395,7 @@ async def toggle_menu_item_availability(item_id: str, available: bool):
         raise HTTPException(status_code=404, detail="Menu item not found")
     return {"message": "Availability updated"}
 
-# Delivery zones endpoints
+# Delivery zones endpoints (existing)
 @api_router.get("/delivery-zones", response_model=List[DeliveryZone])
 async def get_delivery_zones():
     """Get all active delivery zones"""
@@ -129,7 +409,7 @@ async def create_delivery_zone(zone: DeliveryZoneCreate):
     await db.delivery_zones.insert_one(delivery_zone.dict())
     return delivery_zone
 
-# Order endpoints
+# Order endpoints (existing)
 @api_router.post("/orders", response_model=Order)
 async def create_order(order: OrderCreate):
     """Create a new order"""
@@ -159,6 +439,16 @@ async def initialize_sample_data():
     # Check if data already exists
     existing_items = await db.menu_items.count_documents({})
     if existing_items > 0:
+        # Check if admin exists, if not create default admin
+        existing_admin = await db.admin_users.count_documents({})
+        if existing_admin == 0:
+            default_admin = AdminUser(
+                email="admin@duoprevia.com",
+                password_hash=hash_password("admin123"),
+                name="Administrador DUO Previa"
+            )
+            await db.admin_users.insert_one(default_admin.dict())
+        
         return {"message": "Data already initialized"}
     
     # Sample menu items
@@ -257,7 +547,15 @@ async def initialize_sample_data():
     
     await db.delivery_zones.insert_many(sample_zones)
     
-    return {"message": "Sample data initialized successfully"}
+    # Create default admin user
+    default_admin = AdminUser(
+        email="admin@duoprevia.com",
+        password_hash=hash_password("admin123"),
+        name="Administrador DUO Previa"
+    )
+    await db.admin_users.insert_one(default_admin.dict())
+    
+    return {"message": "Sample data and default admin initialized successfully"}
 
 # Include the router in the main app
 app.include_router(api_router)
