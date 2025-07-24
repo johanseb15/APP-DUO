@@ -392,6 +392,9 @@ frontend:
       - working: "NA"
         agent: "main"
         comment: "Implemented service worker with push notification support and user subscription prompts"
+      - working: "NA"
+        agent: "main"
+        comment: "FIXED: ESLint error - updated 'clients.openWindow' to 'self.clients.openWindow' in service worker for proper API scope"
 
   - task: "PWA manifest and offline capability"
     implemented: true
