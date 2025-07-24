@@ -450,23 +450,25 @@ frontend:
       - working: true
         agent: "testing"
         comment: "✅ PASSED: PWA manifest and offline capability working correctly. Manifest.json accessible at /manifest.json with proper configuration: name='DUO Previa', short_name='DUO Previa', description in Spanish, start_url='/', display='standalone', theme_color='#dc2626' (red branding), background_color='#ffffff', icons for 192x192 and 512x512, categories=['food', 'restaurants', 'delivery']. Service worker caches resources for offline capability. PWA installation criteria met."
-    file: "manifest.json"
-    stuck_count: 0
-    priority: "high"
-    needs_retesting: true
-    status_history:
-      - working: "NA"
-        agent: "main"
-        comment: "Created PWA manifest with proper icons, theme colors, and standalone display mode"
+
+metadata:
+  created_by: "main_agent"
+  version: "1.0"
+  test_sequence: 2
+  run_ui: false
 
 test_plan:
-  current_focus:
-    - "Admin authentication API (POST /api/admin/login, GET /api/admin/me)"
-    - "Admin menu management API (POST/PUT/DELETE /api/admin/menu)"
-    - "Admin order management API (GET /api/admin/orders, PUT /api/admin/orders/{id}/status)"
-    - "Push notification API (POST /api/push/subscribe, POST /api/admin/push/send)"
+  current_focus: []
   stuck_tasks: []
-  test_all: true
-  test_priority: "high_first"
+  test_all: false
+  test_priority: "completed"
+
+agent_communication:
+  - agent: "main"
+    message: "PHASE 2 COMPLETE: Extended DUO Previa PWA with complete admin dashboard and push notification system. Added admin authentication (JWT), full CRUD operations for menu/zones/orders, push notification management, PWA service worker, and responsive admin interface. All new backend endpoints ready for testing."
   - agent: "testing"
     message: "🎉 BACKEND TESTING COMPLETE - ALL TESTS PASSED! Comprehensive testing of all 4 high-priority backend tasks completed successfully. All API endpoints are working correctly: (1) Menu APIs return proper Argentine food items with category filtering, (2) Order creation handles realistic customer data and cart items, (3) Delivery zones API provides Córdoba zones with correct pricing, (4) Data initialization populates authentic menu items and zones. Backend is production-ready. Created backend_test.py for future regression testing. Ready for frontend testing if needed."
+  - agent: "main"
+    message: "FIXED SERVICE WORKER: Resolved ESLint error in sw.js by updating 'clients.openWindow' to 'self.clients.openWindow' for proper Service Worker API scope. Backend testing completed successfully - all admin and push notification features working. Ready for frontend testing."
+  - agent: "testing"
+    message: "🎉 COMPREHENSIVE FRONTEND TESTING COMPLETE - ALL TESTS PASSED! Tested all 13 frontend tasks successfully: ✅ Customer App (menu, cart, categories, WhatsApp checkout, responsive design) ✅ Admin Dashboard (login, navigation, CRUD operations) ✅ Menu Management (add/edit/delete with 24 items) ✅ Order Management (filtering, status updates) ✅ Delivery Zone Management (17 Córdoba zones with pricing) ✅ Push Notifications (admin sending, user subscription prompts) ✅ PWA Features (service worker, manifest, offline capability) ✅ Mobile Responsiveness (390x844 viewport tested) ✅ Argentine Localization (Spanish text, peso pricing, Córdoba locations). Only minor issue: WebSocket connection error (non-critical). DUO Previa PWA is production-ready!"
