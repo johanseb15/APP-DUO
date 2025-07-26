@@ -1,0 +1,15 @@
+site_name: DUO Previa Docs
+theme:
+  name: material
+nav:
+  - Inicio: index.md
+  - Instalación: instalacion.md
+  - Frontend: frontend.md
+  - Backend: backend.md
+  - API: api.md
+  - Panel Admin: admin.md
+  - Despliegue: despliegue.md
+
+repo_url: https://github.com/johanseb15/Duo-previa
+repo_name: johanseb15/Duo-previa
+edit_uri: edit/main/docs/
