@@ -59,6 +59,11 @@
     <label class="md-overlay" for="__drawer"></label>
     <div data-md-component="skip">
       
+        
+        <a href="#despliegue-en-produccion" class="md-skip">
+          Skip to content
+        </a>
+      
     </div>
     <div data-md-component="announce">
       
@@ -349,6 +354,21 @@
       <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
       
       
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    Despliegue
+    
+  </span>
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
       
       <a href="./" class="md-nav__link md-nav__link--active">
         
@@ -361,6 +381,43 @@
   
 
       </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#opcion-1-vercel-railway" class="md-nav__link">
+    <span class="md-ellipsis">
+      Opción 1: Vercel + Railway
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#opcion-2-docker-vps" class="md-nav__link">
+    <span class="md-ellipsis">
+      Opción 2: Docker + VPS
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
       
     </li>
   
@@ -383,6 +440,34 @@
   
   
   
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#opcion-1-vercel-railway" class="md-nav__link">
+    <span class="md-ellipsis">
+      Opción 1: Vercel + Railway
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#opcion-2-docker-vps" class="md-nav__link">
+    <span class="md-ellipsis">
+      Opción 2: Docker + VPS
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
   
 </nav>
                   </div>
@@ -401,9 +486,18 @@
   
 
 
-  <h1>Despliegue</h1>
-
-
+<h1 id="despliegue-en-produccion">Despliegue en Producción</h1>
+<h2 id="opcion-1-vercel-railway">Opción 1: Vercel + Railway</h2>
+<ul>
+<li>Frontend en Vercel (<code>npx vercel</code>)</li>
+<li>Backend en Railway con variables de entorno</li>
+</ul>
+<h2 id="opcion-2-docker-vps">Opción 2: Docker + VPS</h2>
+<ul>
+<li>Docker Compose para frontend y backend</li>
+<li>Nginx como proxy inverso</li>
+<li>Let's Encrypt para HTTPS</li>
+</ul>
 
 
 
