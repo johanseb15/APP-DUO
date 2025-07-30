@@ -2,11 +2,12 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { Home, ShoppingCart, User, Search, X, Plus, Minus, Star, Heart, ArrowLeft } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { create } from 'zustand';
+import { getRestaurantBySlug, getCategories, getProducts, createOrder } from './api.js';
 
 // --- Zustand Store (Estado Global para Carrito y Favoritos) ---
 const appStore = create((set) => ({
   cart: [],
-  favorites: ['p1'], // 'p1' es un producto popular por defecto
+  favorites: [], // Favorites will now be fetched/managed via API if needed
   addToCart: (product, quantity = 1) => set((state) => {
     const existingItem = state.cart.find((item) => item.id === product.id);
     if (existingItem) {
@@ -34,28 +35,6 @@ const appStore = create((set) => ({
       : [...state.favorites, productId],
   })),
 }));
-
-// --- MOCK DATA (Datos de ejemplo con productos locales) ---
-const mockRestaurant = {
-  name: 'DUO Previa',
-  logoUrl: 'https://placehold.co/100x100/dc2626/f9fafb?text=DUO',
-  heroImage: 'https://images.unsplash.com/photo-1550547660-d9450f859349?q=80&w=2564&auto=format&fit=crop', // Imagen de hamburguesa
-};
-
-const mockCategories = [
-  { id: 'cat1', name: 'Lomitos', icon: '' },
-  { id: 'cat2', name: 'Hamburguesas', icon: '' },
-  { id: 'cat3', name: 'Empanadas', icon: '' },
-  { id: 'cat4', name: 'Bebidas', icon: '' },
-];
-
-const mockProducts = [
-  { id: 'p1', name: 'Lomito Clásico', description: 'Tierna carne de lomo, lechuga, tomate, huevo y mayonesa de la casa.', price: 15500, image: 'https://placehold.co/600x400/cccccc/333333?text=Lomito', categoryId: 'cat1', popular: true, rating: 4.9 },
-  { id: 'p2', name: 'Hamburguesa DUO', description: 'Doble medallón de carne, queso cheddar, panceta crocante, y salsa DUO.', price: 14000, image: 'https://images.unsplash.com/photo-1568901346375-23c9450c58cd?q=80&w=1998&auto=format&fit=crop', categoryId: 'cat2', popular: true, rating: 4.8 },
-  { id: 'p3', name: 'Empanada de Carne', description: 'Jugosa carne cortada a cuchillo, con la receta tradicional cordobesa.', price: 1800, image: 'https://images.unsplash.com/photo-1628323283129-3f4942995f49?q=80&w=2070&auto=format&fit=crop', categoryId: 'cat3', rating: 4.7 },
-  { id: 'p4', name: 'Lomito Veggie', description: 'Berenjenas grilladas, queso, vegetales salteados y pan de papa.', price: 13000, image: 'https://placehold.co/600x400/cccccc/333333?text=Lomito+Veggie', categoryId: 'cat1', rating: 4.6 },
-  { id: 'p5', name: 'Coca-Cola 500ml', description: 'Botella de 500ml, bien fría.', price: 2000, image: 'https://images.unsplash.com/photo-1622483767028-3f66f32a2ea7?q=80&w=1974&auto=format&fit=crop', categoryId: 'cat4', rating: 4.5 },
-];
 
 // --- COMPONENTES DE UI REFINADOS ---
 
@@ -103,14 +82,14 @@ const BottomNav = ({ activeView, setActiveView }) => {
   );
 };
 
-const Header = () => (
+const Header = ({ restaurant }) => (
   <div className="p-4 pt-6 bg-white sticky top-0 z-30 border-b border-gray-100 shadow-sm">
     <div className="flex justify-between items-center">
       <div>
         <p className="text-sm text-gray-500">Pedir en</p>
-        <h1 className="font-bold text-xl text-gray-800 flex items-center">DUO Previa</h1>
+        <h1 className="font-bold text-xl text-gray-800 flex items-center">{restaurant?.name || 'Cargando...'}</h1>
       </div>
-      <img src={mockRestaurant.logoUrl} alt="DUO Previa Logo" className="w-12 h-12 rounded-full border-2 border-white shadow-md" />
+      {restaurant?.logo && <img src={restaurant.logo} alt={restaurant.name} className="w-12 h-12 rounded-full border-2 border-white shadow-md" />}
     </div>
   </div>
 );
@@ -271,15 +250,21 @@ const ProductDetailSheet = ({ product, isOpen, onClose }) => {
 
 // --- VISTAS PRINCIPALES (PANTALLAS) ---
 
-const HomeScreen = ({ onProductSelect }) => {
-  const [activeCategory, setActiveCategory] = useState(mockCategories[0].id);
+const HomeScreen = ({ onProductSelect, restaurant, categories, products, deliveryZones }) => {
+  const [activeCategory, setActiveCategory] = useState(categories.length > 0 ? categories[0].id : '');
   const filteredProducts = useMemo(() => {
-    return mockProducts.filter((p) => p.categoryId === activeCategory);
-  }, [activeCategory]);
+    return products.filter((p) => p.category_id === activeCategory);
+  }, [activeCategory, products]);
+
+  useEffect(() => {
+    if (categories.length > 0 && !activeCategory) {
+      setActiveCategory(categories[0].id);
+    }
+  }, [categories, activeCategory]);
 
   return (
     <div>
-      <Header />
+      <Header restaurant={restaurant} />
       <div className="p-4">
         <div className="relative">
           <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 w-5 h-5" />
@@ -293,7 +278,7 @@ const HomeScreen = ({ onProductSelect }) => {
 
       <div className="py-2">
         <ul className="flex gap-3 overflow-x-auto px-4 pb-3 no-scrollbar">
-          {mockCategories.map((cat) => (
+          {categories.map((cat) => (
             <motion.li key={cat.id} whileTap={{ scale: 0.95 }}>
               <button
                 onClick={() => setActiveCategory(cat.id)}
@@ -311,7 +296,7 @@ const HomeScreen = ({ onProductSelect }) => {
       <div className="p-4">
         <h2 className="text-2xl font-bold mb-4">Populares de la Semana</h2>
         <div className="grid grid-cols-2 gap-4">
-          {mockProducts.filter((p) => p.popular).map((p) => (
+          {products.filter((p) => p.is_popular).map((p) => (
             <ProductCard key={p.id} product={p} onSelect={onProductSelect} />
           ))}
         </div>
@@ -327,13 +312,64 @@ const HomeScreen = ({ onProductSelect }) => {
   );
 };
 
-const CartScreen = ({ onBack, onCheckout }) => {
+const CartScreen = ({ onBack, onCheckout, restaurant, deliveryZones }) => {
   const cart = appStore((state) => state.cart);
   const updateCartQuantity = appStore((state) => state.updateCartQuantity);
+  const [selectedDeliveryZone, setSelectedDeliveryZone] = useState('');
+  const [customerInfo, setCustomerInfo] = useState({
+    name: '',
+    phone: '',
+    address: '',
+    email: '',
+    delivery_notes: '',
+  });
 
   const subtotal = useMemo(() => cart.reduce((acc, item) => acc + item.price * item.quantity, 0), [cart]);
-  const deliveryFee = 1500; // Ejemplo
+  const deliveryFee = selectedDeliveryZone ? (deliveryZones.find(zone => zone.name === selectedDeliveryZone)?.delivery_fee || 0) : 0;
   const total = subtotal + deliveryFee;
+
+  const handleCustomerInfoChange = (e) => {
+    const { name, value } = e.target;
+    setCustomerInfo(prev => ({ ...prev, [name]: value }));
+  };
+
+  const handlePlaceOrder = async () => {
+    if (!customerInfo.name || !customerInfo.phone || !customerInfo.address || !selectedDeliveryZone) {
+      alert('Please fill in all required customer and delivery information.');
+      return;
+    }
+
+    const orderItems = cart.map(item => ({
+      product_id: item.id,
+      product_name: item.name,
+      quantity: item.quantity,
+      unit_price: item.price,
+      total_price: item.price * item.quantity,
+      customization: {},
+    }));
+
+    const orderData = {
+      customer: customerInfo,
+      items: orderItems,
+      total_price: total,
+      payment_method: 'WHATSAPP',
+      is_delivery: true,
+      notes: customerInfo.delivery_notes,
+      delivery_zone: selectedDeliveryZone,
+    };
+
+    try {
+      const response = await createOrder(restaurant.slug, orderData);
+      console.log('Order created:', response.data);
+      // Clear cart after successful order
+      appStore.setState({ cart: [] });
+      alert('Order placed successfully!');
+      onCheckout(orderData); // Trigger WhatsApp checkout
+    } catch (error) {
+      console.error('Error creating order:', error.response?.data || error);
+      alert('Failed to place order. Please try again.');
+    }
+  };
 
   return (
     <div>
@@ -396,6 +432,65 @@ const CartScreen = ({ onBack, onCheckout }) => {
           </ul>
 
           <div className="mt-8 p-4 bg-white rounded-2xl shadow-md space-y-3">
+            <h3 className="text-lg font-bold mb-2">Customer Information</h3>
+            <input
+              type="text"
+              name="name"
+              placeholder="Your Name"
+              value={customerInfo.name}
+              onChange={handleCustomerInfoChange}
+              className="w-full p-2 border border-gray-300 rounded-md mb-2"
+              required
+            />
+            <input
+              type="tel"
+              name="phone"
+              placeholder="Your Phone (e.g., +549351...)"
+              value={customerInfo.phone}
+              onChange={handleCustomerInfoChange}
+              className="w-full p-2 border border-gray-300 rounded-md mb-2"
+              required
+            />
+            <input
+              type="text"
+              name="address"
+              placeholder="Delivery Address"
+              value={customerInfo.address}
+              onChange={handleCustomerInfoChange}
+              className="w-full p-2 border border-gray-300 rounded-md mb-2"
+              required
+            />
+            <input
+              type="email"
+              name="email"
+              placeholder="Email (Optional)"
+              value={customerInfo.email}
+              onChange={handleCustomerInfoChange}
+              className="w-full p-2 border border-gray-300 rounded-md mb-2"
+            />
+            <textarea
+              name="delivery_notes"
+              placeholder="Delivery Notes (e.g., 'Ring bell twice')"
+              value={customerInfo.delivery_notes}
+              onChange={handleCustomerInfoChange}
+              className="w-full p-2 border border-gray-300 rounded-md mb-4 h-20"
+            ></textarea>
+
+            <h3 className="text-lg font-bold mb-2">Delivery Zone</h3>
+            <select
+              value={selectedDeliveryZone}
+              onChange={(e) => setSelectedDeliveryZone(e.target.value)}
+              className="w-full p-2 border border-gray-300 rounded-md mb-4"
+              required
+            >
+              <option value="">Select a delivery zone</option>
+              {restaurant?.settings?.delivery_zones.map(zone => (
+                <option key={zone.name} value={zone.name}>
+                  {zone.name} (${zone.delivery_fee.toFixed(2)}) - {zone.estimated_time}
+                </option>
+              ))}
+            </select>
+
             <div className="flex justify-between text-gray-600">
               <span>Subtotal</span> <span className="font-medium">${subtotal.toLocaleString('es-AR')}</span>
             </div>
@@ -417,7 +512,7 @@ const CartScreen = ({ onBack, onCheckout }) => {
           transition={{ type: 'spring', stiffness: 300, damping: 30 }}
         >
           <motion.button
-            onClick={onCheckout}
+            onClick={handlePlaceOrder}
             className="w-full bg-green-500 text-white font-bold py-4 rounded-full hover:bg-green-600 shadow-lg shadow-green-300/50 flex items-center justify-center gap-2"
             whileTap={{ scale: 0.98 }}
           >
@@ -447,13 +542,45 @@ const ProfileScreen = () => (
 export default function DuoPreviaApp() {
   const [activeView, setActiveView] = useState('home');
   const [selectedProduct, setSelectedProduct] = useState(null);
-  const cart = appStore((state) => state.cart);
+  const [restaurant, setRestaurant] = useState(null);
+  const [categories, setCategories] = useState([]);
+  const [products, setProducts] = useState([]);
+  const [deliveryZones, setDeliveryZones] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
-  const handleCheckout = () => {
-    const total = cart.reduce((acc, item) => acc + item.price * item.quantity, 0) + 1500;
+  // For now, hardcode the restaurant slug. In a real app, this would come from URL or user selection.
+  const restaurantSlug = 'duo-previa'; 
+
+  useEffect(() => {
+    const fetchData = async () => {
+      setLoading(true);
+      setError(null);
+      try {
+        const [restaurantRes, categoriesRes, productsRes] = await Promise.all([
+          getRestaurantBySlug(restaurantSlug),
+          getCategories(restaurantSlug),
+          getProducts(restaurantSlug),
+        ]);
+        setRestaurant(restaurantRes.data);
+        setCategories(categoriesRes.data);
+        setProducts(productsRes.data);
+        setDeliveryZones(restaurantRes.data.settings.delivery_zones || []);
+      } catch (err) {
+        setError(err.response?.data?.detail || 'Failed to fetch initial data');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchData();
+  }, [restaurantSlug]);
+
+  const handleCheckout = (orderData) => {
+    const total = orderData.total_price;
     let message = `¡Hola DUO Previa!  Quiero hacer un pedido:\n\n`;
-    cart.forEach((item) => {
-      message += `* ${item.quantity}x ${item.name} - $${(item.price * item.quantity).toLocaleString('es-AR')}\n`;
+    orderData.items.forEach((item) => {
+      message += `* ${item.quantity}x ${item.product_name} - $${(item.total_price).toLocaleString('es-AR')}\n`;
     });
     message += `\n*Total (con envío): $${total.toLocaleString('es-AR')}*`;
     message += `\n\n_Por favor, confirmame el pedido y decime cómo seguimos._`;
@@ -463,15 +590,19 @@ export default function DuoPreviaApp() {
   };
 
   const renderView = () => {
+    if (loading) return <div className="p-8 text-center">Cargando aplicación...</div>;
+    if (error) return <div className="p-8 text-center text-red-600">Error al cargar: {error}</div>;
+    if (!restaurant) return <div className="p-8 text-center">No se encontró el restaurante.</div>;
+
     switch (activeView) {
       case 'home':
-        return <HomeScreen onProductSelect={setSelectedProduct} />;
+        return <HomeScreen onProductSelect={setSelectedProduct} restaurant={restaurant} categories={categories} products={products} deliveryZones={deliveryZones} />;
       case 'cart':
-        return <CartScreen onBack={() => setActiveView('home')} onCheckout={handleCheckout} />;
+        return <CartScreen onBack={() => setActiveView('home')} onCheckout={handleCheckout} restaurant={restaurant} deliveryZones={deliveryZones} />;
       case 'profile':
         return <ProfileScreen />;
       default:
-        return <HomeScreen onProductSelect={setSelectedProduct} />;
+        return <HomeScreen onProductSelect={setSelectedProduct} restaurant={restaurant} categories={categories} products={products} deliveryZones={deliveryZones} />;
     }
   };
 

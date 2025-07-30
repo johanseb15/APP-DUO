@@ -1,4 +1,4 @@
-from pydantic import BaseModel, Field, EmailStr, validator
+from pydantic import BaseModel, Field, EmailStr, validator, ConfigDict, field_validator
 from typing import Optional, List, Dict, Any
 from datetime import datetime
 from enum import Enum
@@ -47,10 +47,7 @@ class BaseDocument(BaseModel):
     created_at: datetime = Field(default_factory=datetime.utcnow)
     updated_at: datetime = Field(default_factory=datetime.utcnow)
 
-    class Config:
-        allow_population_by_field_name = True
-        arbitrary_types_allowed = True
-        json_encoders = {ObjectId: str}
+    model_config = ConfigDict(populate_by_name=True, arbitrary_types_allowed=True)
 
 # ===== RESTAURANT MODELS =====
 class RestaurantColors(BaseModel):
@@ -295,7 +292,8 @@ class OrderCreate(BaseModel):
     notes: Optional[str] = None
     delivery_zone: Optional[str] = None # Added from GitHub OrderCreate
 
-    @validator('items')
+    @field_validator('items')
+    @classmethod
     def items_not_empty(cls, v):
         if not v:
             raise ValueError('Order must have at least one item')

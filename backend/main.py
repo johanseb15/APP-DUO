@@ -15,7 +15,7 @@ from services import RestaurantService, ProductService, OrderService, CategorySe
 from dependencies import get_current_user
 
 # Import routers
-from routers import auth, restaurants, categories, products, orders, analytics, push_notifications, initialization
+from routers import auth, restaurants, categories, products, orders, analytics, push_notifications, initialization, public_routes
 
 load_dotenv()
 
@@ -61,6 +61,7 @@ app.include_router(orders.router)
 app.include_router(analytics.router)
 app.include_router(push_notifications.router)
 app.include_router(initialization.router)
+app.include_router(public_routes.router)
 
 # Root endpoint
 @app.get("/")
