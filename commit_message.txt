@@ -1,1 +1,1 @@
-Initial commit: Multi-tenant Food PWA project
+feat: Integrate all features and improvements from remote and local projects
