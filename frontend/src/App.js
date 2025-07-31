@@ -3,6 +3,7 @@ import Lenis from 'lenis';
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import "./App.css";
 import axios from "axios";
+import api from "./api";
 import { AuthContext, AuthProvider } from "./AuthContext";
 import { CartContext, CartProvider } from "./CartContext";
 import PushNotificationService from "./PushNotificationService";

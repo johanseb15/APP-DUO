@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import axios from "axios";
+import api from "../api";
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 const API = `${BACKEND_URL}/api`;
@@ -14,7 +15,7 @@ const OrderManagement = () => {
 
   const fetchOrders = async () => {
     try {
-      const response = await axios.get(`${API}/admin/orders${filterStatus ? `?status=${filterStatus}` : ''}`);
+      const response = await api.getOrders(filterStatus);
       setOrders(response.data);
     } catch (error) {
       console.error('Error fetching orders:', error);
@@ -23,7 +24,7 @@ const OrderManagement = () => {
 
   const updateOrderStatus = async (orderId, status) => {
     try {
-      await axios.put(`${API}/admin/orders/${orderId}/status`, { status });
+      await api.updateOrderStatus(orderId, status);
       fetchOrders();
     } catch (error) {
       console.error('Error updating order status:', error);

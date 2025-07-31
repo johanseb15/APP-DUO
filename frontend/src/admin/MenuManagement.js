@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import axios from "axios";
+import api from "../api";
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 const API = `${BACKEND_URL}/api`;
@@ -23,7 +24,7 @@ const MenuManagement = () => {
 
   const fetchMenuItems = async () => {
     try {
-      const response = await axios.get(`${API}/menu`);
+      const response = await api.getMenuItems();
       setMenuItems(response.data);
     } catch (error) {
       console.error('Error fetching menu items:', error);
@@ -34,9 +35,9 @@ const MenuManagement = () => {
     e.preventDefault();
     try {
       if (editingItem) {
-        await axios.put(`${API}/admin/menu/${editingItem.id}`, formData);
+        await api.updateProduct(editingItem.id, formData);
       } else {
-        await axios.post(`${API}/admin/menu`, formData);
+        await api.createProduct(formData);
       }
       fetchMenuItems();
       resetForm();
@@ -61,7 +62,7 @@ const MenuManagement = () => {
   const handleDelete = async (itemId) => {
     if (window.confirm('¿Está seguro de eliminar este producto?')) {
       try {
-        await axios.delete(`${API}/admin/menu/${itemId}`);
+        await api.deleteProduct(itemId);
         fetchMenuItems();
       } catch (error) {
         console.error('Error deleting menu item:', error);

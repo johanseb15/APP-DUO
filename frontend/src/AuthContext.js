@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import axios from "axios";
+import api from "./api";
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 const API = `${BACKEND_URL}/api`;
@@ -19,7 +20,7 @@ const AuthProvider = ({ children }) => {
 
   const verifyToken = async () => {
     try {
-      const response = await axios.get(`${API}/admin/me`);
+      const response = await api.adminMe();
       setAdmin(response.data);
     } catch (error) {
       console.error('Token verification failed:', error);
@@ -29,7 +30,7 @@ const AuthProvider = ({ children }) => {
 
   const login = async (email, password) => {
     try {
-      const response = await axios.post(`${API}/admin/login`, { email, password });
+      const response = await api.adminLogin(email, password);
       const { access_token, admin: adminData } = response.data;
       
       setToken(access_token);

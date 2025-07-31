@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import axios from "axios";
+import api from "../api";
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 const API = `${BACKEND_URL}/api`;
@@ -21,7 +22,7 @@ const ZoneManagement = () => {
 
   const fetchZones = async () => {
     try {
-      const response = await axios.get(`${API}/delivery-zones`);
+      const response = await api.getDeliveryZones();
       setZones(response.data);
     } catch (error) {
       console.error('Error fetching zones:', error);
@@ -32,9 +33,9 @@ const ZoneManagement = () => {
     e.preventDefault();
     try {
       if (editingZone) {
-        await axios.put(`${API}/admin/delivery-zones/${editingZone.id}`, formData);
+        await api.updateDeliveryZone(editingZone.id, formData);
       } else {
-        await axios.post(`${API}/admin/delivery-zones`, formData);
+        await api.createDeliveryZone(formData);
       }
       fetchZones();
       resetForm();
@@ -57,7 +58,7 @@ const ZoneManagement = () => {
   const handleDelete = async (zoneId) => {
     if (window.confirm('¿Está seguro de eliminar esta zona?')) {
       try {
-        await axios.delete(`${API}/admin/delivery-zones/${zoneId}`);
+        await api.deleteDeliveryZone(zoneId);
         fetchZones();
       } catch (error) {
         console.error('Error deleting delivery zone:', error);

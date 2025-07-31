@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import axios from "axios";
+import api from "../api";
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 const API = `${BACKEND_URL}/api`;
@@ -31,7 +32,7 @@ const NotificationManagement = () => {
 
   const fetchNotifications = async () => {
     try {
-      const response = await axios.get(`${API}/admin/push/notifications`);
+      const response = await api.getSentNotifications();
       setNotifications(response.data);
     } catch (error) {
       console.error('Error fetching notifications:', error);
@@ -41,7 +42,7 @@ const NotificationManagement = () => {
   const handleSendNotification = async (e) => {
     e.preventDefault();
     try {
-      await axios.post(`${API}/admin/push/send`, formData);
+      await api.sendPushNotification(formData);
       setFormData({ title: '', body: '', icon: '', url: '' });
       fetchNotifications();
       alert('Notificación enviada exitosamente');
