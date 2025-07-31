@@ -1,5 +1,5 @@
-// Load configuration from environment or config file
 const path = require('path');
+const WorkboxWebpackPlugin = require('workbox-webpack-plugin');
 
 // Environment variable overrides
 const config = {
@@ -11,7 +11,7 @@ module.exports = {
     alias: {
       '@': path.resolve(__dirname, 'src'),
     },
-    configure: (webpackConfig) => {
+    configure: (webpackConfig, { env, paths }) => {
       
       // Disable hot reload completely if environment variable is set
       if (config.disableHotReload) {
@@ -38,6 +38,15 @@ module.exports = {
             '**/public/**',
           ],
         };
+      }
+
+      if (env === 'production') {
+        webpackConfig.plugins.push(
+          new WorkboxWebpackPlugin.InjectManifest({
+            swSrc: path.resolve(__dirname, 'src', 'service-worker.js'),
+            swDest: 'service-worker.js',
+          })
+        );
       }
       
       return webpackConfig;
