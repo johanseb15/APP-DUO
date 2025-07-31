@@ -22,12 +22,12 @@ jobs:
 
       - name: Build and push Docker image
         run: |
-          gcloud builds submit --tag gcr.io/avian-sandbox-467617-e3/duo-previa-backend ./backend
+          gcloud builds submit --tag gcr.io/cordobaeats/duo-previa-backend ./backend
 
       - name: Deploy to Cloud Run
         run: |
           gcloud run deploy duo-previa-backend \
-            --image gcr.io/avian-sandbox-467617-e3/duo-previa-backend \
+            --image gcr.io/cordobaeats/duo-previa-backend \
             --region us-central1 \
             --platform managed \
             --allow-unauthenticated
