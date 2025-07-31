@@ -102,10 +102,11 @@ const MenuManagement = () => {
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label htmlFor="menu-item-name" className="block text-sm font-medium text-gray-700 mb-1">
                   Nombre
                 </label>
                 <input
+                  id="menu-item-name"
                   type="text"
                   value={formData.name}
                   onChange={(e) => setFormData({...formData, name: e.target.value})}
@@ -114,10 +115,11 @@ const MenuManagement = () => {
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label htmlFor="menu-item-price" className="block text-sm font-medium text-gray-700 mb-1">
                   Precio
                 </label>
                 <input
+                  id="menu-item-price"
                   type="number"
                   step="0.01"
                   value={formData.price}
@@ -129,10 +131,11 @@ const MenuManagement = () => {
             </div>
             
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label htmlFor="menu-item-description" className="block text-sm font-medium text-gray-700 mb-1">
                 Descripción
               </label>
               <textarea
+                id="menu-item-description"
                 value={formData.description}
                 onChange={(e) => setFormData({...formData, description: e.target.value})}
                 required
@@ -143,10 +146,11 @@ const MenuManagement = () => {
             
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label htmlFor="menu-item-category" className="block text-sm font-medium text-gray-700 mb-1">
                   Categoría
                 </label>
                 <select
+                  id="menu-item-category"
                   value={formData.category}
                   onChange={(e) => setFormData({...formData, category: e.target.value})}
                   className="w-full p-2 border border-gray-300 rounded-lg focus:ring-red-500 focus:border-red-500"
@@ -157,10 +161,11 @@ const MenuManagement = () => {
                 </select>
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label htmlFor="menu-item-image-url" className="block text-sm font-medium text-gray-700 mb-1">
                   URL de Imagen
                 </label>
                 <input
+                  id="menu-item-image-url"
                   type="url"
                   value={formData.image_url}
                   onChange={(e) => setFormData({...formData, image_url: e.target.value})}

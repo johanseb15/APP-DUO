@@ -96,10 +96,11 @@ const ZoneManagement = () => {
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label htmlFor="zone-name" className="block text-sm font-medium text-gray-700 mb-1">
                   Nombre
                 </label>
                 <input
+                  id="zone-name"
                   type="text"
                   value={formData.name}
                   onChange={(e) => setFormData({...formData, name: e.target.value})}
@@ -108,10 +109,11 @@ const ZoneManagement = () => {
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label htmlFor="zone-delivery-fee" className="block text-sm font-medium text-gray-700 mb-1">
                   Costo de Envío
                 </label>
                 <input
+                  id="zone-delivery-fee"
                   type="number"
                   step="0.01"
                   value={formData.delivery_fee}
@@ -121,10 +123,11 @@ const ZoneManagement = () => {
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label htmlFor="zone-estimated-time" className="block text-sm font-medium text-gray-700 mb-1">
                   Tiempo Estimado
                 </label>
                 <input
+                  id="zone-estimated-time"
                   type="text"
                   value={formData.estimated_time}
                   onChange={(e) => setFormData({...formData, estimated_time: e.target.value})}

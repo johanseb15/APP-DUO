@@ -280,10 +280,11 @@ const Cart = ({ onClose }) => {
 
           {/* Delivery Zone */}
           <div className="mb-6">
-            <label className="block text-sm font-medium text-gray-700 mb-2">
+            <label htmlFor="delivery-zone-select" className="block text-sm font-medium text-gray-700 mb-2">
               Zona de envío
             </label>
             <select
+              id="delivery-zone-select"
               value={deliveryZone?.id || ''}
               onChange={(e) => {
                 const zone = deliveryZones.find(z => z.id === e.target.value);

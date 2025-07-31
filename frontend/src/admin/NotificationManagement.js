@@ -99,10 +99,11 @@ const NotificationManagement = () => {
 
         <form onSubmit={handleSendNotification} className="space-y-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+            <label htmlFor="notification-title" className="block text-sm font-medium text-gray-700 mb-1">
               Título *
             </label>
             <input
+              id="notification-title"
               type="text"
               value={formData.title}
               onChange={(e) => setFormData({...formData, title: e.target.value})}
@@ -112,10 +113,11 @@ const NotificationManagement = () => {
           </div>
           
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+            <label htmlFor="notification-message" className="block text-sm font-medium text-gray-700 mb-1">
               Mensaje *
             </label>
             <textarea
+              id="notification-message"
               value={formData.body}
               onChange={(e) => setFormData({...formData, body: e.target.value})}
               required
@@ -126,10 +128,12 @@ const NotificationManagement = () => {
           
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <div>
+              <label htmlFor="notification-icon" className="block text-sm font-medium text-gray-700 mb-1">
                 Icono (URL)
               </label>
               <input
+                id="notification-icon"
                 type="url"
                 value={formData.icon}
                 onChange={(e) => setFormData({...formData, icon: e.target.value})}
@@ -137,10 +141,12 @@ const NotificationManagement = () => {
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <div>
+              <label htmlFor="notification-url" className="block text-sm font-medium text-gray-700 mb-1">
                 Enlace (URL)
               </label>
               <input
+                id="notification-url"
                 type="url"
                 value={formData.url}
                 onChange={(e) => setFormData({...formData, url: e.target.value})}
