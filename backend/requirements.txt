@@ -1,17 +1,10 @@
 fastapi
-<<<<<<< HEAD
 uvicorn[standard]
 motor
 python-dotenv
 starlette
 pydantic
 PyJWT
-=======
-uvicorn
-python-dotenv
-motor
 passlib[bcrypt]
 python-jose[cryptography]
-pydantic==2.11.1
 email-validator
->>>>>>> master
