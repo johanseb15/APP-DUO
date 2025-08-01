@@ -469,52 +469,52 @@ function App() {
   const [showUpdatePrompt, setShowUpdatePrompt] = useState(false);
 
   useEffect(() => {
-    // Register service worker for PWA functionality
-    if ('serviceWorker' in navigator) {
-      navigator.serviceWorker.register('/sw.js').then(registration => {
-        console.log('SW registered: ', registration);
-        registration.onupdatefound = () => {
-          const installingWorker = registration.installing;
-          if (installingWorker) {
-            installingWorker.onstatechange = () => {
-              if (installingWorker.state === 'installed' && navigator.serviceWorker.controller) {
-                // New content is available, show update prompt.
-                setShowUpdatePrompt(true);
-              }
-            };
-          }
-        };
-      }).catch(error => {
-        console.log('SW registration failed: ', error);
-      });
-    }
+    const registerServiceWorker = () => {
+      if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.register('/sw.js').then(registration => {
+          console.log('SW registered: ', registration);
+          registration.onupdatefound = () => {
+            const installingWorker = registration.installing;
+            if (installingWorker) {
+              installingWorker.onstatechange = () => {
+                if (installingWorker.state === 'installed' && navigator.serviceWorker.controller) {
+                  setShowUpdatePrompt(true);
+                }
+              };
+            }
+          };
+        }).catch(error => {
+          console.log('SW registration failed: ', error);
+        });
+      }
+    };
 
-    window.addEventListener('beforeinstallprompt', (e) => {
-      // Prevent the mini-infobar from appearing on mobile
+    registerServiceWorker();
+
+    const handleBeforeInstallPrompt = (e) => {
       e.preventDefault();
-      // Stash the event so it can be triggered later.
       setDeferredPrompt(e);
-      // Optionally, send analytics event that PWA install prompt was shown.
       console.log(''beforeinstallprompt' event fired.');
-    });
+    };
 
-    window.addEventListener('appinstalled', () => {
-      // Clear the deferredPrompt so it can't be triggered again
+    const handleAppInstalled = () => {
       setDeferredPrompt(null);
-      // Optionally, send analytics event to indicate successful install
       console.log('PWA was installed!');
-    });
+    };
+
+    window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+    window.addEventListener('appinstalled', handleAppInstalled);
 
     const lenis = new Lenis();
-
     function raf(time) {
       lenis.raf(time);
       requestAnimationFrame(raf);
     }
-
     requestAnimationFrame(raf);
 
     return () => {
+      window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+      window.removeEventListener('appinstalled', handleAppInstalled);
       lenis.destroy();
     };
   }, []);
