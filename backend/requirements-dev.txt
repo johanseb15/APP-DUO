@@ -1,5 +1,4 @@
 pytest
-httpx
 pytest-cov
-faker
-pydantic-settings
+pytest-asyncio
+httpx
