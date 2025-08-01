@@ -21,11 +21,11 @@ jobs:
       uses: actions/cache@v3
       with:
         path: frontend/node_modules
-        key: ${{ runner.os }}-node-${{ hashFiles('frontend/package-lock.json') }}
+        key: ${{ runner.os }}-node-${{ hashFiles('frontend/yarn.lock') }}
         restore-keys: |
           ${{ runner.os }}-node-
     - name: Install dependencies
-      run: npm install
+      run: yarn install
       working-directory: frontend
     - name: Run ESLint
       run: npx eslint src
