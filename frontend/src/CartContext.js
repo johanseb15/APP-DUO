@@ -1,10 +1,44 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 
 const CartContext = React.createContext();
 
 const CartProvider = ({ children }) => {
-  const [cart, setCart] = useState([]);
-  const [deliveryZone, setDeliveryZone] = useState(null);
+  const [cart, setCart] = useState(() => {
+    try {
+      const localCart = localStorage.getItem('cart');
+      return localCart ? JSON.parse(localCart) : [];
+    } catch (error) {
+      console.error("Error parsing cart from localStorage:", error);
+      return [];
+    }
+  });
+  const [deliveryZone, setDeliveryZone] = useState(() => {
+    try {
+      const localDeliveryZone = localStorage.getItem('deliveryZone');
+      return localDeliveryZone ? JSON.parse(localDeliveryZone) : null;
+    } catch (error) {
+      console.error("Error parsing deliveryZone from localStorage:", error);
+      return null;
+    }
+  });
+
+  // Save cart to localStorage whenever it changes
+  useEffect(() => {
+    try {
+      localStorage.setItem('cart', JSON.stringify(cart));
+    } catch (error) {
+      console.error("Error saving cart to localStorage:", error);
+    }
+  }, [cart]);
+
+  // Save deliveryZone to localStorage whenever it changes
+  useEffect(() => {
+    try {
+      localStorage.setItem('deliveryZone', JSON.stringify(deliveryZone));
+    } catch (error) {
+      console.error("Error saving deliveryZone to localStorage:", error);
+    }
+  }, [deliveryZone]);
 
   const addToCart = (item) => {
     setCart(prevCart => {
@@ -33,7 +67,7 @@ const CartProvider = ({ children }) => {
 
   const updateQuantity = (menuItemId, quantity) => {
     if (quantity === 0) {
-      removeFromCart(menuItemId);
+      setCart(prevCart => prevCart.filter(item => item.menu_item_id !== menuItemId));
     } else {
       setCart(prevCart =>
         prevCart.map(item =>

@@ -1,4 +1,5 @@
 from fastapi import FastAPI, HTTPException, Depends, status, Request
+from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from contextlib import asynccontextmanager
@@ -6,6 +7,8 @@ import uvicorn
 from typing import Optional, List
 import os
 from dotenv import load_dotenv
+from config import settings
+from exceptions import InvalidCredentialsException, TokenExpiredException, InvalidTokenException, UserNotFoundException, RestaurantNotFoundException, UserAlreadyExistsException, PasswordMismatchException, InactiveUserException
 
 # Import modules
 from database import database, init_db, close_db
@@ -43,10 +46,71 @@ app = FastAPI(
     lifespan=lifespan
 )
 
+@app.exception_handler(InvalidCredentialsException)
+async def invalid_credentials_exception_handler(request: Request, exc: InvalidCredentialsException):
+    return JSONResponse(
+        status_code=exc.status_code,
+        content={"detail": exc.detail},
+        headers=exc.headers
+    )
+
+@app.exception_handler(InactiveUserException)
+async def inactive_user_exception_handler(request: Request, exc: InactiveUserException):
+    return JSONResponse(
+        status_code=exc.status_code,
+        content={"detail": exc.detail}
+    )
+
+@app.exception_handler(UserNotFoundException)
+async def user_not_found_exception_handler(request: Request, exc: UserNotFoundException):
+    return JSONResponse(
+        status_code=exc.status_code,
+        content={"detail": exc.detail}
+    )
+
+@app.exception_handler(RestaurantNotFoundException)
+async def restaurant_not_found_exception_handler(request: Request, exc: RestaurantNotFoundException):
+    return JSONResponse(
+        status_code=exc.status_code,
+        content={"detail": exc.detail}
+    )
+
+@app.exception_handler(TokenExpiredException)
+async def token_expired_exception_handler(request: Request, exc: TokenExpiredException):
+    return JSONResponse(
+        status_code=exc.status_code,
+        content={"detail": exc.detail},
+        headers=exc.headers
+    )
+
+@app.exception_handler(InvalidTokenException)
+async def invalid_token_exception_handler(request: Request, exc: InvalidTokenException):
+    return JSONResponse(
+        status_code=exc.status_code,
+        content={"detail": exc.detail},
+        headers=exc.headers
+    )
+
+@app.exception_handler(UserAlreadyExistsException)
+async def user_already_exists_exception_handler(request: Request, exc: UserAlreadyExistsException):
+    return JSONResponse(
+        status_code=exc.status_code,
+        content={"detail": exc.detail}
+    )
+
+@app.exception_handler(PasswordMismatchException)
+async def password_mismatch_exception_handler(request: Request, exc: PasswordMismatchException):
+    return JSONResponse(
+        status_code=exc.status_code,
+        content={"detail": exc.detail}
+    )
+
+# CORS middleware
+
 # CORS middleware
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # En producción: dominios específicos
+    allow_origins=settings.cors_origins,  # Usar orígenes de configuración
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

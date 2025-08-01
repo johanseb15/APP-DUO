@@ -1,4 +1,3 @@
-import os
 import jwt
 from datetime import datetime, timedelta
 from passlib.context import CryptContext
@@ -8,17 +7,29 @@ from models import TokenResponse
 import secrets
 import logging
 
+from config import settings
+from exceptions import (
+    InvalidCredentialsException,
+    InactiveUserException,
+    UserNotFoundException,
+    RestaurantNotFoundException,
+    TokenExpiredException,
+    InvalidTokenException,
+    UserAlreadyExistsException,
+    PasswordMismatchException
+)
+
 logger = logging.getLogger(__name__)
 
 class AuthService:
     def __init__(self):
-        self.secret_key = os.getenv("JWT_SECRET_KEY", "your-super-secret-key-change-in-production")
+        self.secret_key = settings.jwt_secret_key
         self.algorithm = "HS256"
-        self.access_token_expire_minutes = int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", "30"))
-        self.refresh_token_expire_days = int(os.getenv("REFRESH_TOKEN_EXPIRE_DAYS", "30"))
+        self.access_token_expire_minutes = settings.access_token_expire_minutes
+        self.refresh_token_expire_days = settings.refresh_token_expire_days
         self.pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
         
-        # In-memory store for refresh tokens (en producción usar Redis)
+        # In-memory store for refresh tokens (en producción usar Redis o MongoDB)
         self.refresh_tokens: Dict[str, Dict] = {}
 
     def hash_password(self, password: str) -> str:
@@ -69,26 +80,28 @@ class AuthService:
         if token in self.refresh_tokens:
             del self.refresh_tokens[token]
 
-    async def verify_token(self, token: str) -> Optional[Dict]:
+    async def verify_token(self, token: str) -> Dict:
         """Verify JWT access token"""
         try:
             payload = jwt.decode(token, self.secret_key, algorithms=[self.algorithm])
             
             if payload.get("type") != "access":
-                return None
+                raise InvalidTokenException()
                 
             user_id = payload.get("user_id")
-            restaurant_slug = payload.get("restaurant_slug")
             
             if not user_id:
-                return None
+                raise InvalidTokenException()
                 
             # Get user from database
             users_collection = get_collection("users")
             user = await users_collection.find_one({"_id": to_object_id(user_id)})
             
-            if not user or not user.get("is_active"):
-                return None
+            if not user:
+                raise UserNotFoundException()
+            
+            if not user.get("is_active"):
+                raise InactiveUserException()
                 
             return {
                 "user_id": str(user["_id"]),
@@ -100,228 +113,203 @@ class AuthService:
             
         except jwt.ExpiredSignatureError:
             logger.warning("Token has expired")
-            return None
+            raise TokenExpiredException()
         except jwt.InvalidTokenError as e:
             logger.warning(f"Invalid token: {e}")
-            return None
+            raise InvalidTokenException()
 
-    async def authenticate_user(self, username: str, password: str, restaurant_slug: str) -> Optional[TokenResponse]:
+    async def authenticate_user(self, username: str, password: str, restaurant_slug: str) -> TokenResponse:
         """Authenticate user and return tokens"""
-        try:
-            users_collection = get_collection("users")
+        users_collection = get_collection("users")
+        
+        # Find user by username and restaurant
+        query = {
+            "username": username,
+            "restaurant_slug": restaurant_slug,
+            "is_active": True
+        }
+        
+        user = await users_collection.find_one(query)
+        
+        if not user:
+            logger.warning(f"User not found: {username}@{restaurant_slug}")
+            raise InvalidCredentialsException()
             
-            # Find user by username and restaurant
-            query = {
-                "username": username,
-                "restaurant_slug": restaurant_slug,
-                "is_active": True
-            }
+        if not self.verify_password(password, user["password_hash"]):
+            logger.warning(f"Invalid password for user: {username}@{restaurant_slug}")
+            raise InvalidCredentialsException()
             
-            user = await users_collection.find_one(query)
+        # Get restaurant info
+        restaurants_collection = get_collection("restaurants")
+        restaurant = await restaurants_collection.find_one({
+            "slug": restaurant_slug,
+            "is_active": True
+        })
+        
+        if not restaurant:
+            logger.warning(f"Restaurant not found or inactive: {restaurant_slug}")
+            raise RestaurantNotFoundException()
             
-            if not user:
-                logger.warning(f"User not found: {username}@{restaurant_slug}")
-                return None
-                
-            if not self.verify_password(password, user["password_hash"]):
-                logger.warning(f"Invalid password for user: {username}@{restaurant_slug}")
-                return None
-                
-            # Get restaurant info
-            restaurants_collection = get_collection("restaurants")
-            restaurant = await restaurants_collection.find_one({
-                "slug": restaurant_slug,
-                "is_active": True
-            })
-            
-            if not restaurant:
-                logger.warning(f"Restaurant not found or inactive: {restaurant_slug}")
-                return None
-                
-            # Create tokens
-            user_id = str(user["_id"])
-            token_data = {
-                "user_id": user_id,
+        # Create tokens
+        user_id = str(user["_id"])
+        token_data = {
+            "user_id": user_id,
+            "username": user["username"],
+            "role": user["role"],
+            "restaurant_slug": restaurant_slug,
+            "restaurant_id": str(user.get("restaurant_id")) if user.get("restaurant_id") else None
+        }
+        
+        access_token = self.create_access_token(token_data)
+        refresh_token = self.create_refresh_token(user_id, restaurant_slug)
+        
+        # Update last login
+        await users_collection.update_one(
+            {"_id": user["_id"]},
+            {"$set": {"last_login": datetime.utcnow()}})
+        
+        return TokenResponse(
+            access_token=access_token,
+            refresh_token=refresh_token,
+            expires_in=self.access_token_expire_minutes * 60,
+            user={
+                "id": user_id,
                 "username": user["username"],
                 "role": user["role"],
                 "restaurant_slug": restaurant_slug,
-                "restaurant_id": str(user.get("restaurant_id")) if user.get("restaurant_id") else None
+                "restaurant_name": restaurant["name"]
             }
-            
-            access_token = self.create_access_token(token_data)
-            refresh_token = self.create_refresh_token(user_id, restaurant_slug)
-            
-            # Update last login
-            await users_collection.update_one(
-                {"_id": user["_id"]},
-                {"$set": {"last_login": datetime.utcnow()}})
-            
-            return TokenResponse(
-                access_token=access_token,
-                refresh_token=refresh_token,
-                expires_in=self.access_token_expire_minutes * 60,
-                user={
-                    "id": user_id,
-                    "username": user["username"],
-                    "role": user["role"],
-                    "restaurant_slug": restaurant_slug,
-                    "restaurant_name": restaurant["name"]
-                }
-            )
-            
-        except Exception as e:
-            logger.error(f"Authentication error: {e}")
-            return None
+        )
 
-    async def refresh_access_token(self, refresh_token: str) -> Optional[TokenResponse]:
+    async def refresh_access_token(self, refresh_token: str) -> TokenResponse:
         """Create new access token using refresh token"""
-        try:
-            token_data = self.verify_refresh_token(refresh_token)
-            if not token_data:
-                return None
-                
-            # Get user from database
-            users_collection = get_collection("users")
-            user = await users_collection.find_one({
-                "_id": to_object_id(token_data["user_id"]),
-                "is_active": True
-            })
+        token_data = self.verify_refresh_token(refresh_token)
+        if not token_data:
+            raise InvalidTokenException()
             
-            if not user:
-                return None
-                
-            # Get restaurant info
-            restaurants_collection = get_collection("restaurants")
-            restaurant = await restaurants_collection.find_one({
-                "slug": token_data["restaurant_slug"],
-                "is_active": True
-            })
+        # Get user from database
+        users_collection = get_collection("users")
+        user = await users_collection.find_one({
+            "_id": to_object_id(token_data["user_id"]),
+            "is_active": True
+        })
+        
+        if not user:
+            raise UserNotFoundException()
             
-            if not restaurant:
-                return None
-                
-            # Create new access token
-            new_token_data = {
-                "user_id": str(user["_id"]),
+        # Get restaurant info
+        restaurants_collection = get_collection("restaurants")
+        restaurant = await restaurants_collection.find_one({
+            "slug": token_data["restaurant_slug"],
+            "is_active": True
+        })
+        
+        if not restaurant:
+            raise RestaurantNotFoundException()
+            
+        # Create new access token
+        new_token_data = {
+            "user_id": str(user["_id"]),
+            "username": user["username"],
+            "role": user["role"],
+            "restaurant_slug": token_data["restaurant_slug"],
+            "restaurant_id": str(user.get("restaurant_id")) if user.get("restaurant_id") else None
+        }
+        
+        access_token = self.create_access_token(new_token_data)
+        
+        return TokenResponse(
+            access_token=access_token,
+            refresh_token=refresh_token,  # Keep same refresh token
+            expires_in=self.access_token_expire_minutes * 60,
+            user={
+                "id": str(user["_id"]),
                 "username": user["username"],
                 "role": user["role"],
                 "restaurant_slug": token_data["restaurant_slug"],
-                "restaurant_id": str(user.get("restaurant_id")) if user.get("restaurant_id") else None
+                "restaurant_name": restaurant["name"]
             }
-            
-            access_token = self.create_access_token(new_token_data)
-            
-            return TokenResponse(
-                access_token=access_token,
-                refresh_token=refresh_token,  # Keep same refresh token
-                expires_in=self.access_token_expire_minutes * 60,
-                user={
-                    "id": str(user["_id"]),
-                    "username": user["username"],
-                    "role": user["role"],
-                    "restaurant_slug": token_data["restaurant_slug"],
-                    "restaurant_name": restaurant["name"]
-                }
-            )
-            
-        except Exception as e:
-            logger.error(f"Token refresh error: {e}")
-            return None
+        )
 
-    async def create_user(self, username: str, password: str, restaurant_slug: str, role: str = "admin", email: Optional[str] = None) -> Optional[str]:
+    async def create_user(self, username: str, password: str, restaurant_slug: str, role: str = "admin", email: Optional[str] = None) -> str:
         """Create new user account"""
-        try:
-            users_collection = get_collection("users")
-            restaurants_collection = get_collection("restaurants")
+        users_collection = get_collection("users")
+        restaurants_collection = get_collection("restaurants")
+        
+        # Check if restaurant exists
+        restaurant = await restaurants_collection.find_one({"slug": restaurant_slug})
+        if not restaurant:
+            raise RestaurantNotFoundException()
             
-            # Check if restaurant exists
-            restaurant = await restaurants_collection.find_one({"slug": restaurant_slug})
-            if not restaurant:
-                raise ValueError("Restaurant not found")
-                
-            # Check if user already exists
-            existing_user = await users_collection.find_one({
-                "username": username,
-                "restaurant_slug": restaurant_slug
-            })
+        # Check if user already exists
+        existing_user = await users_collection.find_one({
+            "username": username,
+            "restaurant_slug": restaurant_slug
+        })
+        
+        if existing_user:
+            raise UserAlreadyExistsException()
             
-            if existing_user:
-                raise ValueError("User already exists")
-                
-            # Create user
-            user_data = {
-                "username": username,
-                "password_hash": self.hash_password(password),
-                "role": role,
-                "restaurant_id": restaurant["_id"],
-                "restaurant_slug": restaurant_slug,
-                "is_active": True,
-                "created_at": datetime.utcnow(),
-                "updated_at": datetime.utcnow()
-            }
-            if email:
-                user_data["email"] = email
-            
-            result = await users_collection.insert_one(user_data)
-            logger.info(f"User created: {username}@{restaurant_slug}")
-            
-            return str(result.inserted_id)
-            
-        except Exception as e:
-            logger.error(f"User creation error: {e}")
-            raise
+        # Create user
+        user_data = {
+            "username": username,
+            "password_hash": self.hash_password(password),
+            "role": role,
+            "restaurant_id": restaurant["_id"],
+            "restaurant_slug": restaurant_slug,
+            "is_active": True,
+            "created_at": datetime.utcnow(),
+            "updated_at": datetime.utcnow()
+        }
+        if email:
+            user_data["email"] = email
+        
+        result = await users_collection.insert_one(user_data)
+        logger.info(f"User created: {username}@{restaurant_slug}")
+        
+        return str(result.inserted_id)
 
     async def change_password(self, user_id: str, old_password: str, new_password: str) -> bool:
         """Change user password"""
-        try:
-            users_collection = get_collection("users")
+        users_collection = get_collection("users")
+        
+        user = await users_collection.find_one({"_id": to_object_id(user_id)})
+        if not user:
+            raise UserNotFoundException()
             
-            user = await users_collection.find_one({"_id": to_object_id(user_id)})()
-            if not user:
-                return False
-                
-            if not self.verify_password(old_password, user["password_hash"]):
-                return False
-                
-            new_hash = self.hash_password(new_password)
+        if not self.verify_password(old_password, user["password_hash"]):
+            raise PasswordMismatchException()
             
-            await users_collection.update_one(
-                {"_id": to_object_id(user_id)},
-                {
-                    "$set": {
-                        "password_hash": new_hash,
-                        "updated_at": datetime.utcnow()
-                    }
+        new_hash = self.hash_password(new_password)
+        
+        await users_collection.update_one(
+            {"_id": to_object_id(user_id)},
+            {
+                "$set": {
+                    "password_hash": new_hash,
+                    "updated_at": datetime.utcnow()
                 }
-            )
-            
-            logger.info(f"Password changed for user: {user_id}")
-            return True
-            
-        except Exception as e:
-            logger.error(f"Password change error: {e}")
-            return False
+            }
+        )
+        
+        logger.info(f"Password changed for user: {user_id}")
+        return True
 
     async def deactivate_user(self, user_id: str) -> bool:
         """Deactivate user account"""
-        try:
-            users_collection = get_collection("users")
-            
-            result = await users_collection.update_one(
-                {"_id": to_object_id(user_id)},
-                {
-                    "$set": {
-                        "is_active": False,
-                        "updated_at": datetime.utcnow()
-                    }
+        users_collection = get_collection("users")
+        
+        result = await users_collection.update_one(
+            {"_id": to_object_id(user_id)},
+            {
+                "$set": {
+                    "is_active": False,
+                    "updated_at": datetime.utcnow()
                 }
-            )
-            
-            return result.modified_count > 0
-            
-        except Exception as e:
-            logger.error(f"User deactivation error: {e}")
-            return False
+            }
+        )
+        
+        return result.modified_count > 0
 
     def cleanup_expired_tokens(self):
         """Remove expired refresh tokens"""

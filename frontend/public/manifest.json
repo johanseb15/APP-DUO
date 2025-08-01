@@ -1,7 +1,7 @@
 {
-  "name": "DUO Previa",
-  "short_name": "DUO Previa",
-  "description": "Los mejores lomitos y hamburguesas de Córdoba",
+  "name": "CordoEats",
+  "short_name": "CordoEats",
+  "description": "La mejor comida de Córdoba, a un toque de distancia.",
   "start_url": "/",
   "display": "standalone",
   "theme_color": "#dc2626",

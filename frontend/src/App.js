@@ -9,9 +9,38 @@ import { CartContext, CartProvider } from "./CartContext";
 import PushNotificationService from "./PushNotificationService";
 import AdminLogin from "./admin/AdminLogin";
 import AdminDashboard from "./admin/AdminDashboard";
+import MenuItem from './components/MenuItem';
+import MenuCategories from './components/MenuCategories';
+import LoadingSpinner from './components/LoadingSpinner';
+import BottomNav from './components/BottomNav';
+import SearchBar from './components/SearchBar';
+import ErrorBoundary from './components/ErrorBoundary';
+import InstallPWAButton from './components/InstallPWAButton';
+import CartItem from './components/CartItem';
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 const API = `${BACKEND_URL}/api`;
+
+const cache = new Map();
+
+axios.interceptors.request.use(config => {
+  if (config.method === 'get' && config.url.includes('/menu')) {
+    const cachedResponse = cache.get(config.url);
+    if (cachedResponse) {
+      console.log('Serving from cache:', config.url);
+      return Promise.resolve({ data: cachedResponse });
+    }
+  }
+  return config;
+});
+
+axios.interceptors.response.use(response => {
+  if (response.config.method === 'get' && response.config.url.includes('/menu')) {
+    console.log('Caching response for:', response.config.url);
+    cache.set(response.config.url, response.data);
+  }
+  return response;
+});
 
 // Header Component (Customer App)
 const Header = () => {
@@ -46,19 +75,19 @@ const Header = () => {
 
   return (
     <>
-      <header className="bg-red-600 text-white p-4 sticky top-0 z-50 shadow-lg">
+      <header className="bg-gradient-to-r from-red-600 to-red-700 text-white p-4 sticky top-0 z-50 shadow-lg transform transition-all duration-300 ease-in-out">
         <div className="container mx-auto flex justify-between items-center">
           <div>
-            <h1 className="text-2xl font-bold">DUO Previa</h1>
+            <h1 className="text-2xl font-bold">CordoEats</h1>
             <p className="text-sm opacity-90">Córdoba - Lomitos & Más</p>
           </div>
           <button
             onClick={() => setShowCart(!showCart)}
-            className="relative bg-red-700 hover:bg-red-800 px-4 py-2 rounded-lg transition-colors"
+            className="relative bg-red-800 hover:bg-red-900 px-4 py-2 rounded-lg transition-all duration-300 transform hover:scale-105"
           >
             🛒 Carrito
             {getCartItemCount() > 0 && (
-              <span className="absolute -top-2 -right-2 bg-yellow-400 text-red-900 text-xs rounded-full h-6 w-6 flex items-center justify-center font-bold">
+              <span className="absolute -top-2 -right-2 bg-yellow-400 text-red-900 text-xs rounded-full h-6 w-6 flex items-center justify-center font-bold animate-bounce-once">
                 {getCartItemCount()}
               </span>
             )}
@@ -95,64 +124,7 @@ const Header = () => {
   );
 };
 
-// Menu Item Component (Customer App)
-const MenuItem = ({ item }) => {
-  const { addToCart } = React.useContext(CartContext);
 
-  return (
-    <div className="bg-white rounded-lg shadow-md overflow-hidden hover:shadow-lg transition-shadow">
-      <img
-        src={item.image_url}
-        alt={item.name}
-        className="w-full h-48 object-cover"
-      />
-      <div className="p-4">
-        <h3 className="text-lg font-semibold text-gray-800">{item.name}</h3>
-        <p className="text-gray-600 text-sm mt-1 mb-3">{item.description}</p>
-        <div className="flex justify-between items-center">
-          <span className="text-xl font-bold text-red-600">
-            ${item.price.toLocaleString()}
-          </span>
-          <button
-            onClick={() => addToCart(item)}
-            className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg transition-colors"
-          >
-            Agregar
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-};
-
-// Menu Categories Component (Customer App)
-const MenuCategories = ({ activeCategory, setActiveCategory }) => {
-  const categories = [
-    { id: 'all', name: 'Todo', icon: '🍽️' },
-    { id: 'lomitos', name: 'Lomitos', icon: '🥪' },
-    { id: 'hamburgers', name: 'Hamburguesas', icon: '🍔' },
-    { id: 'empanadas', name: 'Empanadas', icon: '🥟' }
-  ];
-
-  return (
-    <div className="flex overflow-x-auto pb-2 mb-6 space-x-4">
-      {categories.map(category => (
-        <button
-          key={category.id}
-          onClick={() => setActiveCategory(category.id)}
-          className={`flex items-center space-x-2 px-4 py-2 rounded-full whitespace-nowrap transition-colors ${
-            activeCategory === category.id
-              ? 'bg-red-600 text-white'
-              : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-          }`}
-        >
-          <span>{category.icon}</span>
-          <span>{category.name}</span>
-        </button>
-      ))}
-    </div>
-  );
-};
 
 // Cart Component (Customer App)
 const Cart = ({ onClose }) => {
@@ -168,6 +140,25 @@ const Cart = ({ onClose }) => {
 
   useEffect(() => {
     fetchDeliveryZones();
+
+    // Geolocation for suggesting zones
+    if ("geolocation" in navigator) {
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          const { latitude, longitude } = position.coords;
+          console.log("User location:", { latitude, longitude });
+          // TODO: Implement logic to suggest/pre-select delivery zone based on coordinates
+          // This would require delivery zones in the backend to have geographical data (e.g., lat/lng or polygons)
+        },
+        (error) => {
+          console.error("Error getting user location:", error);
+          // Handle errors like user denying permission
+        },
+        { enableHighAccuracy: true, timeout: 5000, maximumAge: 0 }
+      );
+    } else {
+      console.log("Geolocation is not supported by this browser.");
+    }
   }, []);
 
   const fetchDeliveryZones = async () => {
@@ -191,7 +182,26 @@ const Cart = ({ onClose }) => {
     const deliveryFee = deliveryZone ? deliveryZone.delivery_fee : 0;
     const total = subtotal + deliveryFee;
 
-    const message = `🍔 *PEDIDO DUO PREVIA* 🍔\n\n📋 *DETALLE DEL PEDIDO:*\n${orderDetails}\n\n💰 *RESUMEN:*\nSubtotal: $${subtotal.toLocaleString()}\nEnvío (${deliveryZone?.name}): $${deliveryFee.toLocaleString()}\n*TOTAL: $${total.toLocaleString()}*\n\n👤 *DATOS DEL CLIENTE:*\nNombre: ${customerInfo.name}\nTeléfono: ${customerInfo.phone}\nZona: ${deliveryZone?.name}\nDirección: ${customerInfo.address}\n${customerInfo.instructions ? `Instrucciones: ${customerInfo.instructions}` : ''}\n\n⏰ Tiempo estimado: ${deliveryZone?.estimated_time}\n\n¡Gracias por elegir DUO Previa! 🙌`;
+    const message = `🍔 *PEDIDO CORDOEATS* 🍔
+
+📋 *DETALLE DEL PEDIDO:*
+${orderDetails}
+
+💰 *RESUMEN:*
+Subtotal: ${subtotal.toLocaleString()}
+Envío (${deliveryZone?.name}): ${deliveryFee.toLocaleString()}
+*TOTAL: ${total.toLocaleString()}*
+
+👤 *DATOS DEL CLIENTE:*
+Nombre: ${customerInfo.name}
+Teléfono: ${customerInfo.phone}
+Zona: ${deliveryZone?.name}
+Dirección: ${customerInfo.address}
+${customerInfo.instructions ? `Instrucciones: ${customerInfo.instructions}` : ''}
+
+⏰ Tiempo estimado: ${deliveryZone?.estimated_time}
+
+¡Gracias por elegir CordoEats! 🙌`;
 
     return encodeURIComponent(message);
   };
@@ -244,38 +254,12 @@ const Cart = ({ onClose }) => {
           {/* Cart Items */}
           <div className="space-y-4 mb-6">
             {cart.map(item => (
-              <div key={item.menu_item_id} className="flex items-center justify-between bg-gray-50 p-4 rounded-lg">
-                <div className="flex-1">
-                  <h3 className="font-semibold">{item.name}</h3>
-                  <p className="text-gray-600">${item.price.toLocaleString()} c/u</p>
-                </div>
-                <div className="flex items-center space-x-3">
-                  <div className="flex items-center space-x-2">
-                    <button
-                      onClick={() => updateQuantity(item.menu_item_id, item.quantity - 1)}
-                      className="bg-gray-300 hover:bg-gray-400 text-gray-700 w-8 h-8 rounded-full"
-                    >
-                      -
-                    </button>
-                    <span className="font-semibold">{item.quantity}</span>
-                    <button
-                      onClick={() => updateQuantity(item.menu_item_id, item.quantity + 1)}
-                      className="bg-red-600 hover:bg-red-700 text-white w-8 h-8 rounded-full"
-                    >
-                      +
-                    </button>
-                  </div>
-                  <span className="font-bold text-red-600 min-w-[80px] text-right">
-                    ${(item.price * item.quantity).toLocaleString()}
-                  </span>
-                  <button
-                    onClick={() => removeFromCart(item.menu_item_id)}
-                    className="text-red-500 hover:text-red-700 ml-2"
-                  >
-                    🗑️
-                  </button>
-                </div>
-              </div>
+              <CartItem 
+                key={item.menu_item_id} 
+                item={item} 
+                updateQuantity={updateQuantity} 
+                removeFromCart={removeFromCart} 
+              />
             ))}
           </div>
 
@@ -419,11 +403,7 @@ const Menu = () => {
     : menuItems.filter(item => item.category === activeCategory);
 
   if (loading) {
-    return (
-      <div className="flex justify-center items-center min-h-screen">
-        <div className="text-xl text-gray-600">Cargando menú...</div>
-      </div>
-    );
+    return <LoadingSpinner />;
   }
 
   return (
@@ -449,6 +429,8 @@ const Menu = () => {
           setActiveCategory={setActiveCategory} 
         />
 
+        <SearchBar menuItems={menuItems} />
+
         {/* Menu Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {filteredItems.map(item => (
@@ -466,15 +448,16 @@ const Menu = () => {
       {/* Footer */}
       <footer className="bg-gray-800 text-white py-8 mt-12">
         <div className="container mx-auto px-4 text-center">
-          <h3 className="text-xl font-bold mb-4">DUO Previa</h3>
+          <h3 className="text-xl font-bold mb-4">CordoEats</h3>
           <p className="mb-2">📍 Córdoba, Argentina</p>
           <p className="mb-2">📱 WhatsApp: +54 9 351 234-5678</p>
           <p className="mb-4">🕒 Lun-Dom: 18:00 - 01:00</p>
           <p className="text-sm opacity-75">
-            © 2024 DUO Previa. Todos los derechos reservados.
+            © 2024 CordoEats. Todos los derechos reservados.
           </p>
         </div>
       </footer>
+      <BottomNav />
     </div>
   );
 };
@@ -482,6 +465,8 @@ const Menu = () => {
 // Main App Component
 function App() {
   const { isAuthenticated } = React.useContext(AuthContext);
+  const [deferredPrompt, setDeferredPrompt] = useState(null);
+  const [showUpdatePrompt, setShowUpdatePrompt] = useState(false);
 
   useEffect(() => {
     // Register service worker for PWA functionality
@@ -489,11 +474,41 @@ function App() {
       navigator.serviceWorker.register('/sw.js')
         .then(registration => {
           console.log('SW registered: ', registration);
+          registration.onupdatefound = () => {
+            const installingWorker = registration.installing;
+            if (installingWorker == null) {
+              return;
+            }
+            installingWorker.onstatechange = () => {
+              if (installingWorker.state === 'installed') {
+                if (navigator.serviceWorker.controller) {
+                  // New content is available; show update prompt
+                  setShowUpdatePrompt(true);
+                }
+              }
+            };
+          };
         })
         .catch(registrationError => {
           console.log('SW registration failed: ', registrationError);
         });
     }
+
+    window.addEventListener('beforeinstallprompt', (e) => {
+      // Prevent the mini-infobar from appearing on mobile
+      e.preventDefault();
+      // Stash the event so it can be triggered later.
+      setDeferredPrompt(e);
+      // Optionally, send analytics event that PWA install prompt was shown.
+      console.log(''beforeinstallprompt' event fired.');
+    });
+
+    window.addEventListener('appinstalled', () => {
+      // Clear the deferredPrompt so it can't be triggered again
+      setDeferredPrompt(null);
+      // Optionally, send analytics event to indicate successful install
+      console.log('PWA was installed!');
+    });
 
     const lenis = new Lenis();
 
@@ -512,15 +527,29 @@ function App() {
   return (
     <AuthProvider>
       <CartProvider>
-        <div className="App">
-          <BrowserRouter>
-            <Routes>
-              <Route path="/admin" element={isAuthenticated ? <AdminDashboard /> : <AdminLogin />} />
-              <Route path="/" element={<Menu />} />
-              <Route path="*" element={<Navigate to="/" />} />
-            </Routes>
-          </BrowserRouter>
-        </div>
+        <ErrorBoundary>
+          <div className="App">
+            <BrowserRouter>
+              <Routes>
+                <Route path="/admin" element={isAuthenticated ? <AdminDashboard /> : <AdminLogin />} />
+                <Route path="/" element={<Menu />} />
+                <Route path="*" element={<Navigate to="/" />} />
+              </Routes>
+            </BrowserRouter>
+            <InstallPWAButton deferredPrompt={deferredPrompt} setDeferredPrompt={setDeferredPrompt} />
+            {showUpdatePrompt && (
+              <div className="fixed bottom-0 left-0 right-0 bg-green-600 text-white p-3 text-center z-50">
+                <p className="font-medium">¡Nueva versión disponible! Recarga la página para actualizar.</p>
+                <button
+                  onClick={() => window.location.reload()}
+                  className="mt-2 bg-white text-green-600 px-4 py-2 rounded-lg font-semibold"
+                >
+                  Recargar ahora
+                </button>
+              </div>
+            )}
+          </div>
+        </ErrorBoundary>
       </CartProvider>
     </AuthProvider>
   );

@@ -55,7 +55,7 @@ const NotificationManagement = () => {
   const presetNotifications = [
     {
       title: '¡Ya estamos abiertos! 🎉',
-      body: 'DUO Previa está disponible para pedidos. ¡Ordena tus lomitos favoritos!'
+      body: 'CordoEats está disponible para pedidos. ¡Ordena tus lomitos favoritos!'
     },
     {
       title: '¡Promo del día disponible! 🍔',

@@ -22,12 +22,13 @@ jobs:
 
       - name: Build and push Docker image
         run: |
-          gcloud builds submit --tag gcr.io/cordobaeats/duo-previa-backend ./backend
+          gcloud builds submit --tag gcr.io/${{ secrets.GCP_PROJECT_ID }}/cordoeats-backend ./backend
 
       - name: Deploy to Cloud Run
         run: |
-          gcloud run deploy duo-previa-backend \
-            --image gcr.io/cordobaeats/duo-previa-backend \
-            --region us-central1 \
+          gcloud run deploy cordoeats-backend \
+            --image gcr.io/${{ secrets.GCP_PROJECT_ID }}/cordoeats-backend \
+            --region ${{ secrets.GCP_REGION }} \
             --platform managed \
-            --allow-unauthenticated
+            --allow-unauthenticated \
+            --set-env-vars MONGODB_URL=${{ secrets.MONGODB_URL }},JWT_SECRET_KEY=${{ secrets.JWT_SECRET_KEY }},ACCESS_TOKEN_EXPIRE_MINUTES=${{ secrets.ACCESS_TOKEN_EXPIRE_MINUTES }},REFRESH_TOKEN_EXPIRE_DAYS=${{ secrets.REFRESH_TOKEN_EXPIRE_DAYS }},DATABASE_NAME=${{ secrets.DATABASE_NAME }}

@@ -11,7 +11,7 @@ const AdminSidebar = ({ activeSection, setActiveSection, onLogout }) => {
   return (
     <div className="bg-gray-800 text-white w-64 min-h-screen p-4">
       <div className="mb-8">
-        <h1 className="text-xl font-bold text-red-400">DUO Previa Admin</h1>
+        <h1 className="text-xl font-bold text-red-400">CordoEats Admin</h1>
       </div>
       
       <nav className="space-y-2">

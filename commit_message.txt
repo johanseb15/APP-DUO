@@ -1,1 +1,1 @@
-Fix: Resolve merge conflict in backend/requirements.txt
+fix: Resolve frontend ESLint errors by centralizing API calls and fixing label associations
