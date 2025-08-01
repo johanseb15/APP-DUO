@@ -267,7 +267,7 @@ pytest
 **Proyecto**: CordoEats PWA  
 **Desarrollado para**: Córdoba, Argentina  
 **Stack**: React + FastAPI + MongoDB  
-**Año**: 2024  
+**Año**: 2025
 
 ---
 
@@ -279,4 +279,4 @@ pytest
 
 ---
 
-*Hecho con ❤️ en Córdoba, Argentina* 🇦🇷
+*Hecho con ❤️ en Córdoba, Argentina* 🇦🇷.
