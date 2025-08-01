@@ -4,6 +4,7 @@ motor
 python-dotenv
 starlette
 pydantic
+pydantic-settings
 PyJWT
 passlib[bcrypt]
 python-jose[cryptography]

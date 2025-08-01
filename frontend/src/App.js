@@ -471,27 +471,22 @@ function App() {
   useEffect(() => {
     // Register service worker for PWA functionality
     if ('serviceWorker' in navigator) {
-      navigator.serviceWorker.register('/sw.js')
-        .then(registration => {
-          console.log('SW registered: ', registration);
-          registration.onupdatefound = () => {
-            const installingWorker = registration.installing;
-            if (installingWorker == null) {
-              return;
-            }
+      navigator.serviceWorker.register('/sw.js').then(registration => {
+        console.log('SW registered: ', registration);
+        registration.onupdatefound = () => {
+          const installingWorker = registration.installing;
+          if (installingWorker) {
             installingWorker.onstatechange = () => {
-              if (installingWorker.state === 'installed') {
-                if (navigator.serviceWorker.controller) {
-                  // New content is available; show update prompt
-                  setShowUpdatePrompt(true);
-                }
+              if (installingWorker.state === 'installed' && navigator.serviceWorker.controller) {
+                // New content is available, show update prompt.
+                setShowUpdatePrompt(true);
               }
             };
-          };
-        })
-        .catch(registrationError => {
-          console.log('SW registration failed: ', registrationError);
-        });
+          }
+        };
+      }).catch(error => {
+        console.log('SW registration failed: ', error);
+      });
     }
 
     window.addEventListener('beforeinstallprompt', (e) => {
