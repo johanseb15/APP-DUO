@@ -34,4 +34,5 @@ jobs:
             --region ${{ secrets.GCP_REGION }} \
             --platform managed \
             --allow-unauthenticated \
+            --timeout=300s \
             --set-env-vars MONGODB_URL=${{ secrets.MONGODB_URL }},JWT_SECRET_KEY=${{ secrets.JWT_SECRET_KEY }},ACCESS_TOKEN_EXPIRE_MINUTES=${{ secrets.ACCESS_TOKEN_EXPIRE_MINUTES }},REFRESH_TOKEN_EXPIRE_DAYS=${{ secrets.REFRESH_TOKEN_EXPIRE_DAYS }},DATABASE_NAME=${{ secrets.DATABASE_NAME }}
