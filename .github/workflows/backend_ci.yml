@@ -24,6 +24,12 @@ jobs:
         pip install --no-cache-dir --force-reinstall -r backend/requirements.txt
         pip install --no-cache-dir --force-reinstall -r backend/requirements-dev.txt
     - name: Run tests
+      env:
+        MONGODB_URL: ${{ secrets.MONGODB_URL }}
+        JWT_SECRET_KEY: ${{ secrets.JWT_SECRET_KEY }}
+        DATABASE_NAME: ${{ secrets.DATABASE_NAME }}
+        ACCESS_TOKEN_EXPIRE_MINUTES: ${{ secrets.ACCESS_TOKEN_EXPIRE_MINUTES }}
+        REFRESH_TOKEN_EXPIRE_DAYS: ${{ secrets.REFRESH_TOKEN_EXPIRE_DAYS }}
       run: |
         # Set PYTHONPATH to include the backend directory
         export PYTHONPATH=$PYTHONPATH:./backend
