@@ -41,3 +41,6 @@ export default [
       "jsx-a11y/no-static-element-interactions": "off", // Temporarily disable for build
       "jsx-a11y/no-noninteractive-element-interactions": "off", // Temporarily disable for build
       "react/react-in-jsx-scope": "off" // Not needed for React 17+ JSX transform
+    }
+  }
+];
