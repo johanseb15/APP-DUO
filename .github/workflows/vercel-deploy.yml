@@ -19,6 +19,3 @@ jobs:
           vercel-org-id: ${{ secrets.VERCEL_ORG_ID }}
           vercel-project-id: ${{ secrets.VERCEL_PROJECT_ID }}
           working-directory: ./frontend
-        env:
-          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
-          REACT_APP_BACKEND_URL: ${{ secrets.VERCEL_FRONTEND_BACKEND_URL }}
