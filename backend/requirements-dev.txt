@@ -1,6 +1,6 @@
 pytest
 pytest-cov
 pytest-asyncio
-httpx>=0.20.0
+httpx==0.23.0
 asgi_lifespan
 faker
