@@ -1,1 +1,1 @@
-docs: Actualizar README.md con las últimas mejoras y correcciones
+fix(backend): Eliminar caché de pip y forzar actualización en Backend CI
