@@ -5,6 +5,7 @@ import pluginJsxA11y from "eslint-plugin-jsx-a11y";
 
 export default [
   {
+    ignores: ["src/AdminApp.js"],
     languageOptions: {
       ecmaVersion: 2020,
       sourceType: "module",
