@@ -25,6 +25,8 @@ jobs:
         ACCESS_TOKEN_EXPIRE_MINUTES: ${{ secrets.ACCESS_TOKEN_EXPIRE_MINUTES }}
         REFRESH_TOKEN_EXPIRE_DAYS: ${{ secrets.REFRESH_TOKEN_EXPIRE_DAYS }}
       run: |
+        echo "Content of backend/tests/conftest.py:"
+        cat backend/tests/conftest.py
         # Set PYTHONPATH to include the backend directory
         export PYTHONPATH=$PYTHONPATH:./backend
         pytest backend/
