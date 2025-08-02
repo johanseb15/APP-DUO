@@ -18,7 +18,7 @@ async def setup_database():
 @pytest_asyncio.fixture(scope="session")
 async def async_client():
     async with LifespanManager(app):
-        async with AsyncClient(app=app, base_url="http://127.0.0.1:8000", follow_redirects=True) as client:
+        async with AsyncClient(base_url="http://127.0.0.1:8000", follow_redirects=True) as client:
             yield client
 
 @pytest_asyncio.fixture(scope="session")
